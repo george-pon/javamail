@@ -1,7 +1,7 @@
 # CHANGELOG.md
 
 * build2, stable, latest
-    * support UTF-8 direct mail
+    * support UTF-8 8bit mail
 
 * build1
     * initial commit
