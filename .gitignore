@@ -6,3 +6,5 @@
 bin/
 build/
 sampledata
+release.ps1
+myextract.sh

@@ -31,6 +31,7 @@ public class MailDecode {
 	Charset headerCharset = StandardCharsets.ISO_8859_1;
 	String bodyType = "text/plain";
 	Charset bodyCharset = StandardCharsets.ISO_8859_1;
+	String bodyContentTransferEncoding = "7bit";
 
 	// 以下ボディ部のマルチパート用
 	String bodyBoundary = null;
@@ -40,6 +41,7 @@ public class MailDecode {
 	String bodyBoundaryTransferEncoding = "quoted-printable";
 	StringBuffer bodyBoundaryLineBuffer = new StringBuffer();
 	StringBuffer bodyBoundaryBase64Buffer = new StringBuffer();
+	StringBuffer bodyBoundaryBase64HtmlBuffer = new StringBuffer();
 	Map<String, String> bodyBoundaryMap = new HashMap<String, String>();
 	Map<String, String> bodyBoundaryContentTypeMap = new HashMap<String, String>();
 	Map<String, String> bodyBoundaryContentTransferEncodingMap = new HashMap<String, String>();
@@ -117,28 +119,55 @@ public class MailDecode {
 						inHeaderPart = false;
 						inBodyPart = true;
 
-						for (Map.Entry<String, String> entry : headerMap.entrySet()) {
-							log.finer("headerMap:" + entry.getKey() + ":" + entry.getValue());
+						{
+							// ログ出力
+							StringBuilder sb = new StringBuilder();
+							sb.append("\n");
+							for (Map.Entry<String, String> entry : headerMap.entrySet()) {
+								sb.append("headerMap:" + entry.getKey() + ":" + entry.getValue());
+								sb.append("\n");
+							}
+							sb.append("\n");
+							log.finer(sb.toString());
 						}
 
 						// Content-Typeの解析はここで行う
 						headerContentTypeMap = parseContentType("Content-Type: " + headerMap.get("Content-Type"));
-						for (Map.Entry<String, String> entry : headerContentTypeMap.entrySet()) {
-							log.finer("contentTypeMap:" + entry.getKey() + ":" + entry.getValue());
+						{
+							// ログ出力
+							StringBuilder sb = new StringBuilder();
+							sb.append("\n");
+							for (Map.Entry<String, String> entry : headerContentTypeMap.entrySet()) {
+								sb.append("contentTypeMap:" + entry.getKey() + ":" + entry.getValue());
+								sb.append("\n");
+							}
+							sb.append("\n");
+							log.finer(sb.toString());
 						}
 
 						// bodyの形式を設定
-						bodyType = headerContentTypeMap.get("Content-Type");
+						if (headerContentTypeMap.get("Content-Type") != null) {
+							bodyType = headerContentTypeMap.get("Content-Type");
+						}
 						if (headerContentTypeMap.get("boundary") != null) {
 							bodyBoundary = "--" + headerContentTypeMap.get("boundary");
 							bodyBoundaryEnd = "--" + headerContentTypeMap.get("boundary") + "--";
 						}
-						String charsetName = headerContentTypeMap.get("charset");
-						if (charsetName != null) {
-							bodyCharset = Charset.forName(charsetName);
+						{
+							String charsetName = headerContentTypeMap.get("charset");
+							if (charsetName != null) {
+								bodyCharset = Charset.forName(charsetName);
+							}
+						}
+						{
+							String s = headerMap.get("Content-Transfer-Encoding");
+							if (s != null) {
+								bodyContentTransferEncoding = s;
+							}
 						}
 
-						log.fine("    bodyType:" + bodyType + "    bodyCharset:" + bodyCharset.name());
+						log.fine("    bodyType:" + bodyType + "    bodyCharset:" + bodyCharset.name()
+								+ "    bodyContentTransferEncoding:" + bodyContentTransferEncoding);
 
 						sbResult.append("\n");
 
@@ -155,8 +184,8 @@ public class MailDecode {
 					} else {
 						int idx = line.indexOf(":");
 						if (idx >= 0) {
-							String newHeaderKey = line.substring(0, idx);
-							String newHeaderValue = line.substring(idx + 1);
+							String newHeaderKey = line.substring(0, idx).trim();
+							String newHeaderValue = line.substring(idx + 1).trim();
 							if (!newHeaderKey.equals(currentHeaderKey)) {
 								currentHeaderKey = newHeaderKey;
 								headerMap.put(newHeaderKey, newHeaderValue);
@@ -187,7 +216,7 @@ public class MailDecode {
 				}
 
 				// -----------------------------------------------------
-				// Bodyの処理。ここは色々なモードがある。
+				// メールBodyの処理。ここは色々なモードがある。
 				//
 				if (inBodyPart == true) {
 
@@ -195,10 +224,33 @@ public class MailDecode {
 					String line = bodyCharset.decode(bb).toString();
 
 					if (bodyType.equals("text/plain")) {
-						// text/plainならそのまま
-						log.finest("text/plain line:" + line.length() + ":" + line);
-						sbResult.append(line);
-						sbResult.append("\n");
+						// text/plainの場合
+						if (bodyContentTransferEncoding.equals("7bit")) {
+							log.finest("text/plain 7bit line:" + line.length() + ":" + line);
+							sbResult.append(line);
+							sbResult.append("\n");
+						} else if (bodyContentTransferEncoding.equals("base64")) {
+							log.finest("text/plain base64 line:" + line.length() + ":" + line);
+							sbResult.append(line);
+							sbResult.append("\n");
+						} else if (bodyContentTransferEncoding.equals("8bit")) {
+							log.finest("text/plain 8bit line:" + line.length() + ":" + line);
+							sbResult.append(line);
+							sbResult.append("\n");
+						}
+					} else if (bodyType.equals("text/html")) {
+						// text/htmlの場合
+						if (bodyContentTransferEncoding.equals("base64")) {
+							// バッファに貯めて続く
+							bodyBoundaryBase64HtmlBuffer.append(line);
+							log.finest("text/html:"+bodyContentTransferEncoding+":line:" + line.length() + ":" + line);
+							continue;
+						} else {
+							// う。こんなのあるのか。
+							log.finest("text/html:" + bodyContentTransferEncoding + ":line:" + line.length() + ":" + line);
+							// sbResult.append(line);
+							// sbResult.append("\n");
+						}
 					} else if (bodyType.equals("multipart/alternative")) {
 						// multipartの場合は色々
 
@@ -263,8 +315,8 @@ public class MailDecode {
 							} else {
 								int idx = line.indexOf(":");
 								if (idx >= 0) {
-									String newHeaderKey = line.substring(0, idx);
-									String newHeaderValue = line.substring(idx + 1);
+									String newHeaderKey = line.substring(0, idx).trim();
+									String newHeaderValue = line.substring(idx + 1).trim();
 									if (!newHeaderKey.equals(currentHeaderKey)) {
 										currentHeaderKey = newHeaderKey;
 										bodyBoundaryMap.put(newHeaderKey, newHeaderValue);
@@ -316,10 +368,12 @@ public class MailDecode {
 						// sb.append(line);
 						// sb.append("\n");
 					}
-
 				}
+			} // end of while outer loop
 
-			}
+			// 最後にflush
+			multipartflush();
+
 		} catch (IOException e) {
 			String msg = "ioexception";
 			log.log(Level.SEVERE, msg, e);
@@ -328,7 +382,10 @@ public class MailDecode {
 		return sbResult.toString();
 	}
 
+	// バッファのフラッシュ処理
 	private void multipartflush() {
+
+		// マルチパートのBase64 (text/plain)
 		if (bodyBoundaryBase64Buffer.length() > 0) {
 			try {
 				Base64.Decoder decoder = Base64.getDecoder();
@@ -342,8 +399,25 @@ public class MailDecode {
 			}
 			bodyBoundaryBase64Buffer = new StringBuffer();
 		}
+
+		// body部htmlのBase64 (text/html)
+		if (bodyBoundaryBase64HtmlBuffer.length() > 0) {
+			try {
+				Base64.Decoder decoder = Base64.getDecoder();
+				byte[] bytes = decoder.decode(bodyBoundaryBase64HtmlBuffer.toString().getBytes());
+				String s = new String(bytes, bodyCharset.name());
+				sbResult.append(s);
+				log.finest("text/html body base64 result:");
+			} catch (UnsupportedEncodingException e) {
+				String msg = e.getMessage();
+				log.severe(msg);
+				sbResult.append(msg);
+			}
+			bodyBoundaryBase64HtmlBuffer = new StringBuffer();
+		}
 	}
 
+	// Content-Type等のヘッダ情報の属性を解析してMapに入れる
 	private Map<String, String> parseContentType(String s) {
 		Map<String, String> resultMap = new HashMap<String, String>();
 

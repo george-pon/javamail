@@ -28,6 +28,7 @@ function f-gradle-build-run-sample {
     javamail  sampledata/amazon.txt
     javamail  sampledata/spam-amazon.txt
     javamail  sampledata/beruna.txt
+    javamail  sampledata/paypal.txt
 }
 
 # ライブラリを追加した場合などに、eclipseの設定ファイルを作り直す
@@ -63,9 +64,6 @@ function f-gradle-setup-all {
     # run visual studio code
     code . -r
     Start-Sleep -Milliseconds 15000
-
-    f-gradle-build-run
-    if ( $LASTEXITCODE -ne 0 ) { Write-Output "build and run failed." ; return 1 }
 }
 
 f-gradle-setup-all
