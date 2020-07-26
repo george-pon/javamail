@@ -26,7 +26,7 @@ public class AppMain {
 	// 使用時ヘルプ
 	private static final String usageMsg1 = "javamail : 標準入力からメールを読み込んでプレーンテキストに変換する。\n";
 	private static final String usageMsg2 = "    build:";
-	private static final String usageMsg3 = "    usage:java -jar javamail.jar [options] [filename or -]" + "\n"
+	private static final String usageMsg3 = "    usage:java -jar javamail.jar [options] filename or -" + "\n"
 			+ "    options)\n" + "        -help          ヘルプ表示\n\n" + "        -debug         デバッグ情報表示\n"
 			+ "        -v             デバッグ情報表示\n" + "        -vv            デバッグ情報表示\n"
 			+ "        -vvv           デバッグ情報表示\n\n";
