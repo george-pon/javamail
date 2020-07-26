@@ -237,17 +237,36 @@ public class MailDecode {
 							log.finest("text/plain 8bit line:" + line.length() + ":" + line);
 							sbResult.append(line);
 							sbResult.append("\n");
+						} else if (bodyContentTransferEncoding.equals("quoted-printable")) {
+							log.finest("text/plain quoted-printable line:" + line.length() + ":" + line);
+							// quoted-printable の場合
+							// 行終端が = の場合は継続行
+							if (line.endsWith("=")) {
+								// バッファに追加して次へ
+								bodyBoundaryLineBuffer.append(line.substring(0, line.length() - 1));
+								continue;
+							} else {
+								// 一度バッファに追加してまとめて処理
+								bodyBoundaryLineBuffer.append(line);
+								String s = decodeQuotedPrintable(bodyBoundaryLineBuffer.toString(),
+										bodyBoundaryCharset);
+								sbResult.append(s);
+								sbResult.append("\n");
+								bodyBoundaryLineBuffer = new StringBuffer();
+							}
 						}
 					} else if (bodyType.equals("text/html")) {
 						// text/htmlの場合
 						if (bodyContentTransferEncoding.equals("base64")) {
 							// バッファに貯めて続く
 							bodyBoundaryBase64HtmlBuffer.append(line);
-							log.finest("text/html:"+bodyContentTransferEncoding+":line:" + line.length() + ":" + line);
+							log.finest(
+									"text/html:" + bodyContentTransferEncoding + ":line:" + line.length() + ":" + line);
 							continue;
 						} else {
 							// う。こんなのあるのか。
-							log.finest("text/html:" + bodyContentTransferEncoding + ":line:" + line.length() + ":" + line);
+							log.finest(
+									"text/html:" + bodyContentTransferEncoding + ":line:" + line.length() + ":" + line);
 							// sbResult.append(line);
 							// sbResult.append("\n");
 						}

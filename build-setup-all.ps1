@@ -29,6 +29,7 @@ function f-gradle-build-run-sample {
     javamail  sampledata/spam-amazon.txt
     javamail  sampledata/beruna.txt
     javamail  sampledata/paypal.txt
+    javamail  sampledata/pixiv.txt
 }
 
 # ライブラリを追加した場合などに、eclipseの設定ファイルを作り直す
