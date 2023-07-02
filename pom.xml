@@ -1,0 +1,193 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>jp.or.rim.yk.george</groupId>
+  <artifactId>javamail</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0.${revision}</version>
+  <name>javamail</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- https://qiita.com/kasa_le/items/9698770a04b3e0189eaf Mavenのversionに日付とその日のビルド番号を自動的に付与する - Qiita -->
+    <!-- バージョニングに使うリビジョン番号。 CI/CDツールにて -Drevision=buildNumber で上書きする -->
+    <revision>SNAPSHOT</revision>
+  </properties>
+
+  <!-- ローカルファイルのjarを疑似的に登録したrepoを記載 -->
+  <!-- ローカルrepoへのjarファイルのインストール方法  for powershell
+  & mvn install:install-file "-Dfile=./lib/javafetch.jar" "-DgroupId=dummy" "-DartifactId=javafetch" "-Dversion=0.0.2" "-Dpackaging=jar" "-DlocalRepositoryPath=${PWD}/repo/"
+  -->
+  <!--
+  <repositories>
+    <repository>
+      <id>repo</id>
+      <url>file://${basedir}/repo</url>
+    </repository>
+  </repositories>
+-->
+
+  <dependencies>
+
+    <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
+    <!--
+    <dependency>
+        <groupId>org.jsoup</groupId>
+        <artifactId>jsoup</artifactId>
+        <version>1.15.4</version>
+    </dependency>
+    -->
+
+    <!-- https://mvnrepository.com/artifact/org.json/json -->
+    <!--
+    <dependency>
+        <groupId>org.json</groupId>
+        <artifactId>json</artifactId>
+        <version>20220320</version>
+    </dependency>
+    -->
+
+    <!-- https://mvnrepository.com/artifact/junit/junit -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- 新型JUnitはテストコード書き直しか。。 -->
+    <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
+    <!-- 
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>5.8.2</version>
+        <scope>test</scope>
+    </dependency>
+    -->
+
+
+    <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
+    <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>4.6.1</version>
+        <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+
+
+  <build>
+
+    <finalName>javamail</finalName>
+
+    <plugins>
+
+      <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-compiler-plugin -->
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.10.1</version>
+        <configuration>
+          <source>17</source>
+          <target>17</target>
+        </configuration>
+      </plugin>
+
+      <!-- 2022.04.08 Java 18 から file.encoding=UTF-8 がデフォルトになったが 
+      テストの System.out.println の結果は SJIS で処理される前提らしいので COMPAT を指定 -->
+      <!-- 
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.12.4</version>
+        <configuration>
+          <argLine>-Dfile.encoding=COMPAT</argLine>
+        </configuration>
+      </plugin>
+      -->
+
+      <!-- jarを作成する maven jar plugin  -->
+      <!-- 本来の goal である jar とは別に実行される。 -->
+      <!-- https://maven.apache.org/plugins/maven-jar-plugin/ -->
+      <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-jar-plugin -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.2.2</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+              <mainClass>jp.or.rim.yk.george.javamail.AppMain</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <!-- packaging war の時に、jarのパラメータを与えるために指定する deploy plugin -->
+      <!-- https://kikutaro777.hatenablog.com/entry/20121225/1356440268 maven-jar-plugin、maven-deploy-plugin - Challenge Engineer Life ! -->
+      <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-deploy-plugin -->
+      <!--
+      <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>2.8.2</version>
+          <executions>
+              <execution>
+                  <phase>deploy</phase>
+                  <goals>
+                      <goal>deploy-file</goal>
+                  </goals>
+                  <configuration>
+                      <packaging>jar</packaging>
+                      <generatePom>true</generatePom>
+                      <url>${project.distributionManagement.repository.url}</url>
+                      <artifactId>${project.artifactId}</artifactId>
+                      <groupId>${project.groupId}</groupId>
+                      <version>${project.version}</version>
+                      <file>${project.build.directory}/${project.artifactId}-${project.version}.jar</file>
+                  </configuration>
+              </execution>
+          </executions>
+      </plugin>
+      -->
+
+      <!-- 依存関係ライブラリを含んだ実行可能jarを作成する maven plugin  -->
+      <!-- https://qiita.com/hakshu/items/0f7b59f00a02b506b07d Maven Assemblyとは？ - Qiita -->
+      <!-- https://maven.apache.org/plugins/maven-assembly-plugin/ Apache Maven Assembly Plugin – Introduction -->
+      <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
+      <!-- 出力先は target/kjwikig-jar-with-dependencies.jar になる -->
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.4.1</version>
+        <configuration>
+          <finalName>javamail-${project.version}</finalName>
+          <appendAssemblyId>true</appendAssemblyId>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass>jp.or.rim.yk.george.javamail.AppMain</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+</project>

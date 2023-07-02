@@ -5,6 +5,7 @@
 .vscode/
 bin/
 build/
+target/
 sampledata
 release.ps1
 myextract.sh
