@@ -1,5 +1,8 @@
 # CHANGELOG.md
 
+* build 11
+    * support text/html quoted-printable
+    * build for JDK 17
 * build3, stable, latest
     * support UTF-8 quoted-printable
 

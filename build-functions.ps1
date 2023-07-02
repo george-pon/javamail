@@ -1,8 +1,3 @@
-#--------------------------------------------
-# gradle build 用 / maven build 用
-#
-
-
 #----------------------------------------------------------------------------
 # for maven 
 #
@@ -12,15 +7,27 @@ function f-mvn-repo-refresh {
     mvn dependency:purge-local-repository
 }
 
-# ビルド番号を得る
+# ビルド番号をインクリメントして得る
 function f-get-build-no {
+    if (Test-Path ./build-no.ps1) {
+        . ./build-no.ps1
+    }
+    else {
+        $buildno = 0
+    }
+    $buildno++
+    Write-Output '$buildno='"$buildno" > ./build-no.ps1
+    return $buildno
+}
+
+# ビルド番号を読み込む。インクリメントはしない。
+function f-read-build-no {
     if (Test-Path ./build-no.ps1) {
         . ./build-no.ps1
     }
     else {
         $buildno = 1
     }
-    $buildno++
     Write-Output '$buildno='"$buildno" > ./build-no.ps1
     return $buildno
 }
@@ -53,16 +60,30 @@ function f-maven-build-run-decode {
     java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/instagram.txt
 }
 
-# maven で作った javafetch ライブラリを kjwikig にリリースする
-function f-maven-build-release {
-    Write-Output "copy ./target/javafetch.jar ../kjwikig/lib"
-    Copy-Item ./target/javafetch.jar ../kjwikig/lib
+# maven で作った javamail を freebsd にリリースする
+function f-maven-build-release-freebsd {
+    $buildno = f-read-build-no
+    Write-Output "buildno is ${buildno}"
+
+    # シェルの作成。改行コードがCRLFになってしまうのでそこは手動で修正する必要がある。
+    $main_str = @"
+#!/bin/bash
+java -jar ~/bin/javamail.jar "$@"
+"@
+    $main_file = "./target/mail"
+    if ( Test-Path $main_file ) {
+        Remove-Item $main_file
+    }
+    Write-Output $main_str | Add-Content -Encoding UTF8 "${main_file}"
+
+    scp ./target/javamail.jar freebsd63:bin
+    scp ./target/javamail freebsd63:bin
 }
 
 # 開発開始時、maven build 起動まで実施
 function f-maven-setup-all {
     f-maven-build
-    if ( $LASTEXITCODE -ne 0 ) { Write-Output "build failed." ; return 1 }
+    if ( $LASTEXITCODE -ne 0 ) { Write-Host "build failed." ; return }
 
     # run eclipse
     f-eclipse
