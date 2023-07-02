@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 public class MailDecode {
 
 	// ログ
-	private static Logger log = Logger.getLogger(AppMain.class.getName());
+	private static Logger log = Logger.getLogger(MailDecode.class.getName());
 
 	// 内部変数
 	boolean inHeaderPart = true;
@@ -40,6 +40,7 @@ public class MailDecode {
 	String bodyBoundaryCharset = "UTF-8";
 	String bodyBoundaryTransferEncoding = "quoted-printable";
 	StringBuffer bodyBoundaryLineBuffer = new StringBuffer();
+	StringBuffer bodyBoundaryPrintableQuotedHtmlBuffer = new StringBuffer();
 	StringBuffer bodyBoundaryBase64Buffer = new StringBuffer();
 	StringBuffer bodyBoundaryBase64HtmlBuffer = new StringBuffer();
 	Map<String, String> bodyBoundaryMap = new HashMap<String, String>();
@@ -258,11 +259,24 @@ public class MailDecode {
 					} else if (bodyType.equals("text/html")) {
 						// text/htmlの場合
 						if (bodyContentTransferEncoding.equals("base64")) {
-							// バッファに貯めて続く
+							// Base64バッファに貯めて続く
 							bodyBoundaryBase64HtmlBuffer.append(line);
 							log.finest(
 									"text/html:" + bodyContentTransferEncoding + ":line:" + line.length() + ":" + line);
 							continue;
+						} else if (bodyContentTransferEncoding.equals("quoted-printable")) {
+							log.finest("text/html quoted-printable line:" + line.length() + ":" + line);
+							// text/html + quoted-printable の場合
+							// 行終端が = の場合は継続行
+							if (line.endsWith("=")) {
+								// バッファに追加して次へ
+								bodyBoundaryPrintableQuotedHtmlBuffer.append(line.substring(0, line.length() - 1));
+								continue;
+							} else {
+								// 一度バッファに追加してまとめて処理
+								bodyBoundaryPrintableQuotedHtmlBuffer.append(line);
+								// バッファに追加して次へ
+							}
 						} else {
 							// う。こんなのあるのか。
 							log.finest(
@@ -434,6 +448,15 @@ public class MailDecode {
 			}
 			bodyBoundaryBase64HtmlBuffer = new StringBuffer();
 		}
+
+		// body部htmlのPrintableQuoted
+		{
+			String s = decodeQuotedPrintable(bodyBoundaryPrintableQuotedHtmlBuffer.toString(),
+					bodyBoundaryCharset);
+			sbResult.append(s);
+			sbResult.append("\n");
+			bodyBoundaryPrintableQuotedHtmlBuffer = new StringBuffer();
+		}
 	}
 
 	// Content-Type等のヘッダ情報の属性を解析してMapに入れる
@@ -551,7 +574,7 @@ public class MailDecode {
 	String decodeQuotedPrintable(String line, String charsetName) {
 		log.finest("charsetName:" + charsetName + "    line:" + line);
 		Charset charset = Charset.forName(charsetName);
-		ByteBuffer bb = ByteBuffer.allocate(8192);
+		ByteBuffer bb = ByteBuffer.allocate(1024 * 128);
 		for (int i = 0; i < line.length(); i++) {
 			String s = line.substring(i, i + 1);
 			if (s.equals("=")) {
