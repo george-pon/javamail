@@ -1,5 +1,5 @@
 #----------------------------------------------------------------------------
-# for maven 
+# for maven
 #
 
 # mvn ローカルリポジトリを再度ダウンロードしたりリフレッシュしたり
@@ -16,7 +16,7 @@ function f-get-build-no {
         $buildno = 0
     }
     $buildno++
-    Write-Output '$buildno='"$buildno" > ./build-no.ps1
+    Write-Output "`$buildno=$buildno" > ./build-no.ps1
     return $buildno
 }
 
@@ -27,15 +27,15 @@ function f-read-build-no {
     }
     else {
         $buildno = 1
+        Write-Output "`$buildno=$buildno" > ./build-no.ps1
     }
-    Write-Output '$buildno='"$buildno" > ./build-no.ps1
     return $buildno
 }
 
 function f-maven-build {
     $buildno = f-get-build-no
     Write-Output "buildno is ${buildno}"
-    & mvn "-Drevision=${buildno}" clean package 
+    & mvn "-Drevision=${buildno}" clean package
 }
 
 # ビルドと起動 (maven)
@@ -54,10 +54,27 @@ function f-maven-build-run-decode {
     java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/nicos.txt
     java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/amazon.txt
     java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/spam-amazon.txt
-    java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/beruna.txt
     java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/paypal.txt
     java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/pixiv.txt
     java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/instagram.txt
+    java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/apple-mail.txt
+    # ログ詳細を出すなら -vvv を指定
+    #java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  -vvv  ./sampledata/apple-mail.txt
+}
+
+# 起動するだけ (maven)
+function f-maven-run-decode {
+    $buildno = f-read-build-no
+    Write-Output "buildno is ${buildno}"
+    java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/nicos.txt
+    java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/amazon.txt
+    java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/spam-amazon.txt
+    java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/paypal.txt
+    java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/pixiv.txt
+    java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/instagram.txt
+    java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  ./sampledata/apple-mail.txt
+    # ログ詳細を出すなら -vvv を指定
+    #java -jar ./target/javamail-1.0.${buildno}-jar-with-dependencies.jar  -vvv  ./sampledata/apple-mail.txt
 }
 
 # maven で作った javamail を freebsd にリリースする
@@ -70,14 +87,15 @@ function f-maven-build-release-freebsd {
 #!/bin/bash
 java -jar ~/bin/javamail.jar "$@"
 "@
-    $main_file = "./target/mail"
+    $main_file = "./target/javamail"
     if ( Test-Path $main_file ) {
         Remove-Item $main_file
     }
     Write-Output $main_str | Add-Content -Encoding UTF8 "${main_file}"
 
-    scp ./target/javamail.jar freebsd63:bin
-    scp ./target/javamail freebsd63:bin
+    scp ./target/javamail.jar freebsd66:bin
+    # 既に freebsd 側に存在する場合はコメント
+    # scp ./target/javamail freebsd66:bin
 }
 
 # 開発開始時、maven build 起動まで実施
@@ -146,8 +164,8 @@ function f-gradle-eclipse-setup {
 # eclipse起動
 function f-eclipse {
     Push-Location
-    Set-Location C:\HOME\Eclipse-JEE-2023-06-R\eclipse
-    Start-Process C:\HOME\Eclipse-JEE-2023-06-R\eclipse\eclipse.exe
+    Set-Location C:\HOME\Eclipse-JEE-2024-09-R\eclipse
+    Start-Process C:\HOME\Eclipse-JEE-2024-09-R\eclipse\eclipse.exe
     Pop-Location
 }
 
@@ -163,7 +181,7 @@ function f-getDiskPerf {
     if ( $idleC -gt $max_idle ) {
         $max_idle = $idleC
     }
-  
+
     $samplesD = Get-Counter -Counter "\LogicalDisk(d:)\% Disk Time" -SampleInterval 1 -MaxSamples 3;
     $idleD = $samplesD.CounterSamples.CookedValue | Measure-Object -Average | Select-Object -ExpandProperty Average;
     Write-Output "idleD : $idleD"
@@ -172,7 +190,7 @@ function f-getDiskPerf {
     }
     Write-Output "max_idle : $max_idle"
     return $max_idle
-}  
+}
 
 #----------------------------------------------------------------------
 # disk が暇になるまで待機する

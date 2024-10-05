@@ -1,5 +1,7 @@
 # CHANGELOG.md
 
+* build 21
+    * support apple mail
 * build 11
     * support text/html quoted-printable
     * build for JDK 17

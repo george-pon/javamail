@@ -55,7 +55,7 @@ public class MailDecode {
 
 	/**
 	 * メールデコードエントリー for ファイル
-	 * 
+	 *
 	 * @param file
 	 * @return
 	 */
@@ -75,8 +75,8 @@ public class MailDecode {
 
 	/**
 	 * メールデコードエントリー for InputStream
-	 * 
-	 * @param in
+	 *
+	 * @param in 入力ストリーム
 	 * @return
 	 */
 	public String decode(InputStream in) {
@@ -224,6 +224,8 @@ public class MailDecode {
 					// デコード
 					String line = bodyCharset.decode(bb).toString();
 
+					log.finest("inBodyPart: bodyType: " + bodyType + "    line:" + line);
+
 					if (bodyType.equals("text/plain")) {
 						// text/plainの場合
 						if (bodyContentTransferEncoding.equals("7bit")) {
@@ -238,7 +240,7 @@ public class MailDecode {
 							log.finest("text/plain 8bit line:" + line.length() + ":" + line);
 							sbResult.append(line);
 							sbResult.append("\n");
-						} else if (bodyContentTransferEncoding.equals("quoted-printable")) {
+						} else if (bodyContentTransferEncoding.equalsIgnoreCase("quoted-printable")) {
 							log.finest("text/plain quoted-printable line:" + line.length() + ":" + line);
 							// quoted-printable の場合
 							// 行終端が = の場合は継続行
@@ -287,13 +289,13 @@ public class MailDecode {
 					} else if (bodyType.equals("multipart/alternative")) {
 						// multipartの場合は色々
 
-						log.finest("multipart/alternative line:" + "    part:" + inBodyBoundaryPartNumber + ":" + line);
+						log.finest("multipart/alternative" + "    part:" + inBodyBoundaryPartNumber + ":" + line);
 
 						// マルチパートのBoundary開始チェック
 						if (line.equals(bodyBoundary)) {
 							multipartflush();
 							inBodyBoundaryPartNumber = 1; // マルチパートヘッダ部
-							log.finest("found bodyBoundary:" + bodyBoundary + "    inBodyBoundaryPartNumber:"
+							log.finest("found bodyBoundary start:" + bodyBoundary + "    inBodyBoundaryPartNumber:"
 									+ inBodyBoundaryPartNumber);
 							continue;
 						}
@@ -301,7 +303,7 @@ public class MailDecode {
 						if (line.equals(bodyBoundaryEnd)) {
 							multipartflush();
 							inBodyBoundaryPartNumber = 3; // マルチパート終了後
-							log.finest("found bodyBoundaryEnd:" + bodyBoundaryEnd + "    inBodyBoundaryPartNumber:"
+							log.finest("found bodyBoundary end:" + bodyBoundaryEnd + "    inBodyBoundaryPartNumber:"
 									+ inBodyBoundaryPartNumber);
 							continue;
 						}
@@ -332,7 +334,8 @@ public class MailDecode {
 									bodyBoundaryTransferEncoding = bodyBoundaryContentTransferEncodingMap
 											.get("Content-Transfer-Encoding");
 								}
-								log.fine("    bodyBoundaryContentType:" + bodyBoundaryContentType
+								log.fine("multipart body header values"
+										+ "    bodyBoundaryContentType:" + bodyBoundaryContentType
 										+ "    bodyBoundaryCharset:" + bodyBoundaryCharset
 										+ "    bodyBoundaryTransferEncoding:" + bodyBoundaryTransferEncoding);
 								continue;
@@ -365,7 +368,7 @@ public class MailDecode {
 
 							if (bodyBoundaryContentType.equals("text/plain")) {
 								// text/plainの場合
-								if (bodyBoundaryTransferEncoding.equals("quoted-printable")) {
+								if (bodyBoundaryTransferEncoding.equalsIgnoreCase("quoted-printable")) {
 									// quoted-printable の場合
 									// 行終端が = の場合は継続行
 									if (line.endsWith("=")) {
@@ -501,11 +504,11 @@ public class MailDecode {
 
 	/**
 	 * メールヘッダ部のBase64を処理する。
-	 * 
+	 *
 	 * =?文字セット?エンコード方式?エンコード後の文字列?
-	 * 
+	 *
 	 * =?ISO-2022-JP?B?xxxx?= Base64型
-	 * 
+	 *
 	 */
 	private class HeaderIso2022jpbase64Replacer implements StringReplacer {
 
@@ -533,11 +536,11 @@ public class MailDecode {
 
 	/**
 	 * メールヘッダ部のBase64を処理する。
-	 * 
+	 *
 	 * =?文字セット?エンコード方式?エンコード後の文字列?
-	 * 
+	 *
 	 * =?UTF-8?B?xxxx?= Base64型
-	 * 
+	 *
 	 */
 	private class HeaderUtf8base64Replacer implements StringReplacer {
 
@@ -564,9 +567,9 @@ public class MailDecode {
 
 	/**
 	 * quoted printable をデコードする
-	 * 
+	 *
 	 * Amazon=E3=83=9D=E3=82=A4=E3=83=B3=E3=83=88=EF=BC=9A
-	 * 
+	 *
 	 * @param line
 	 * @param charsetName
 	 * @return
@@ -574,7 +577,7 @@ public class MailDecode {
 	String decodeQuotedPrintable(String line, String charsetName) {
 		log.finest("charsetName:" + charsetName + "    line:" + line);
 		Charset charset = Charset.forName(charsetName);
-		ByteBuffer bb = ByteBuffer.allocate(1024 * 128);
+		ByteBuffer bb = ByteBuffer.allocate(1024 * 256); // 256KB
 		for (int i = 0; i < line.length(); i++) {
 			String s = line.substring(i, i + 1);
 			if (s.equals("=")) {
